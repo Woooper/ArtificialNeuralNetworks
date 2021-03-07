@@ -1,0 +1,109 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+g = -9.8 #m/s**2  yer çekimi ivmesi
+mc = 1 # kg    arabanın kütlesi
+m = 0.1 # kg   çubuğun kütlesi
+l = 0.5  # m çubuğun orta noktsının uzunluğu
+uc = 0.0005 # araba ile yol arasındaki sürtünme katsayısı
+up = 0.000002 # çucuk ve araba arasındaki sürtünme katsayısı
+F = 10  # uygulanan kuvvet
+bet = 0.02 #s zaman farkı
+tet1 = 11 # ilk açı değeri
+tet2 = 0 # ilk açı hızı
+tet1_b=tet1*np.pi/180 # açıların sin-cos verisyona uygun hale getirilirmesi
+tet2_b=tet2*np.pi/180
+x1 = 2.3  # ilk konum değeri
+x2 = 0    # ilk hız değeri
+lamb = 0.8 # lambda
+gama = 0.95 # gama
+nt =  0.0001*np.random.rand(1) # gürültü
+pt=0   # tahmin katsayısı başlangıç değeri
+s=0.9  # çürüme katsayısı
+a=1000 # w değişim oranı katsayısı
+et=0   # eligibility
+beta=0.5  # v güncelleme katsayısı
+yt=1   # başlangıçtı iç bölgede
+
+def sig(x):
+    return (1/(1+np.exp(-x/3)))    # Çok büyük değerler olduğu zaman sonsuza gitmemesi için sigmoid fonsiyonu eklenir.
+aralik = lambda x,y: 0 if abs(x)<2.4 and abs(y)<(12) else -1   # Karar bölgesi
+akt = lambda x: 1 if x>0 else -1    # y çıkısı değerleri
+
+xit = np.array([x1,x2,tet1,tet2]).reshape(4,1)   # ilk değerler aktarılır.
+xnt= np.zeros((4,1))
+vt = np.zeros((4,1))
+wt = np.zeros((4,1))
+r_list=np.array([])
+rn_list=np.array([])
+x1_list=np.array([])
+x2_list=np.array([])
+tet1_list=np.array([])
+tet2_list=np.array([])
+yt_list=np.array([])
+sayac=0
+for i in range (500):
+    xit = np.array([x1,x2,tet1,tet2]).reshape(4,1)
+    rt = aralik(x1,tet1)       # Ödül değeri bulunur.
+    r_list=np.concatenate((r_list,[rt]))
+    #ACE işlemleri
+    pt1=pt          # Tahmin değeri
+    pt = sig(np.matmul(vt.T,xit)) 
+    rnt = rt + gama*pt-pt1    # Pekiştirilmiş tahmin değeri
+    rn_list=np.concatenate((rn_list,rnt[0]))
+    xnt = lamb*xnt+(1-lamb)*xit   # xi nin zamanda izi
+    vt = vt + beta*(rnt)*xnt   # ace ağırlıklarının güncellenmesi
+    #ASE işlemleri
+    yt1=yt
+    yt = akt(np.matmul(wt.T,xit)+nt)  # çıktı değerinin hesaplanması
+    yt_list=np.concatenate((yt_list,[yt]))   
+    wt = wt+a*et*rt      # ASE ağırlıklarının güncellenmesi 
+    et = s*et+(1-s)*yt*xit   # nitelik güncellemesi
+    if yt<0 and yt!=yt1:     # Değer -1 aldığında sistem istenilen durum dışındadı dışındadır. Önceki değerde sistem dışında değilse kuvveti ters çevir.
+        F = -F
+    elif yt>=0 and yt!=yt1: # Sistem intenilen durum içindedir. Aynı kuvveti uygula.
+        F = F
+    else :
+        F=F
+    m1=mc+m
+    f1k=(m*l*(tet2**2)*np.sin(tet1_b))+(uc*np.sign(x2))    
+    f2k=(g*np.sin(tet1_b))+(np.cos(tet1_b)*((-F-f1k)/m1))-(up*tet2/(m*l))
+    tet11=tet1
+    tet1 = tet1 + bet*tet2
+    tet2 = tet2 + bet*(f2k/(l*((4/3)-(m*((np.cos(tet1_b))**2))/m1)))
+    x1 = x1 + bet*(x2)
+    x2 = x2 + bet*(F+(f1k-m*l*f2k*np.cos(tet1_b)))/m1
+    x1_list = np.concatenate((x1_list,[x1]))
+    x2_list = np.concatenate((x2_list,[x2]))
+    tet1_list = np.concatenate((tet1_list,[tet1]))
+    tet2_list = np.concatenate((tet2_list,[tet2]))
+    sayac=sayac+1
+    
+plt.figure(figsize=(10,10))
+plt.subplot(321)
+plt.plot(np.arange(len(r_list)),r_list)
+plt.title('Gerçek Ödül Değerleri')
+
+plt.subplot(322)
+plt.title('ACE Ödül Değerleri')
+plt.plot(np.arange(len(rn_list)),rn_list)
+
+plt.subplot(323)
+plt.title('Konum Değerleri')
+plt.plot(np.arange(len(x1_list)),x1_list)
+
+plt.subplot(324)
+plt.title('Hız Değerleri')
+plt.plot(np.arange(len(x2_list)),x2_list)
+
+plt.subplot(325)
+plt.title('Açı Değerleri')
+plt.plot(np.arange(len(tet1_list)),tet1_list)
+plt.subplot(326)
+plt.title('Açı değişimi Değerleri')
+plt.plot(np.arange(len(tet2_list)),tet2_list)
+
+plt.figure()
+plt.plot(np.arange(len(rn_list)),rn_list-r_list)
+plt.title('Tahmin Gerçek Ödül-Ceza Değerleri Farkı');
