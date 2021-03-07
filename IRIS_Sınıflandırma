@@ -1,0 +1,166 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split 
+from sklearn.metrics import mean_squared_error
+
+hatalar = np.array([0]).reshape(1,1)
+
+for buyuk_dongu in range (20):   # 20 sonuç değerleri alınacak.
+
+    
+    # Veriler python ortamın alınır.
+    # Veri dosyası kod dosyası ile aynı dizinde olmalıdır.
+    
+    iris_data = pd.read_csv(r'bezdekIris.data').copy()
+    a=iris_data.columns.values          # Veriler bozuk şekilde geldiği için düzeltilme yapılmıştır. Verilerin ilk satırı sutün isimleri olarak gelmiştir.
+    iris_data.columns = ['Canak Yaprak Uzunlugu','Canak Yaprak Genisligi','Tac Yaprak Uzunluğu','Tac Yaprak Genisligi','Isim']   # Sütun isimleri verilir.
+    new_row = {'Canak Yaprak Uzunlugu':a[0],'Canak Yaprak Genisligi':a[1],'Tac Yaprak Uzunluğu':a[2],'Tac Yaprak Genisligi':a[3],'Isim':a[4]} 
+    iris_data = iris_data.append(new_row, ignore_index=True)   # Eksik olan veri eklenir.
+    
+    # Sınıflar numpy array'i olarak tanımlanır.
+    
+    sin1=np.concatenate((np.ones((49,1))*0.9,0.1*np.ones((49,2))),axis=1)
+    sin2=np.concatenate((np.ones((50,1))*0.1,0.6*np.ones((50,1))),axis=1)
+    sin2=np.concatenate((sin2,0.1*np.ones((50,1))),axis=1)
+    sin3=np.concatenate((np.ones((50,2))*0.1,0.3*np.ones((50,1))),axis=1)
+    siniflar = np.concatenate((sin1,sin2))
+    siniflar = np.concatenate((siniflar,sin3))
+    siniflar = np.concatenate((siniflar,sin1[1:2]))
+    
+    # Veriler numpy array'i olarak toplanır.
+    
+    iris_veri = iris_data['Canak Yaprak Uzunlugu'].values.reshape(150,1)
+    iris_veri = np.concatenate((iris_veri,iris_data['Canak Yaprak Genisligi'].values.reshape(150,1)),axis=1)
+    iris_veri = np.concatenate((iris_veri,iris_data['Tac Yaprak Uzunluğu'].values.reshape(150,1)),axis=1)
+    iris_veri = np.concatenate((iris_veri,iris_data['Tac Yaprak Genisligi'].values.reshape(150,1)),axis=1)  # İlk değerin sutün ismi olması sebebiyle en sona eklenmiştir.
+    
+    iris_veri = iris_veri.astype(np.float64) # Veri 'object' halinde iken 'float64' olarak değiştirilir.
+    
+    # Eğitim ve test kümesi ayrılması
+    
+    x_train,x_test,y_train,y_test = train_test_split(iris_veri,siniflar,test_size=0.25,random_state=buyuk_dongu*2)
+    
+    # Aktivasyon fonksiyonu tanımlanır. Çıkışlar 0 ile 1 arasında olacağı için lojistik fonksiyon kullanılabilir. Reel sayılarla çalıştığımız için x/4 şeklinde tanımlanır.
+    
+    # Model Kurma
+    
+    # Çıkış Değerlerimiz 0 ile 1 arasında olduğu için aktivasyon fonksiyonu lojistik olabilir.
+    def akt(x):
+        return (1/(1+np.exp(-x/4)))
+    def akt_turev(x):
+        return np.exp(x/4)/(((np.exp(x/4)+1)**2)*4)
+    
+    hiz = np.array([0.5,0.7,0.8,0.7])
+    momentum = np.array([0.4,0.6,0.7,0.6])
+    x_train_b = np.hstack ((x_train, [[1]] * len (x_train)))
+    W1 = 0.2 * np.random.rand(8,len(x_train_b.T))
+    W2 = 5 * np.random.rand(10,len(W1)+1)
+    W3 = 3 * np.random.rand(6,len(W2)+1)
+    W4 = 4*np.random.rand(3,len(W3)+1)
+    hata_liste = np.array([])
+    ton=0
+    ht=1
+    dongu=0
+    cikis_list = np.zeros((len(x_train),3))
+    while ht >= 0.03:
+        ton=0
+        dongu=dongu+1
+        moment_1=W1
+        moment_2=W2
+        moment_3=W3
+        moment_4=W4
+        for ii in (x_train_b):    
+            nod = np.matmul(W1,ii.reshape(len(ii.T),1))
+            nod_list = nod
+            mid = akt(nod)        
+            mid = np.concatenate((mid,np.array([1]).reshape(1,1)))
+            nod2 = np.matmul(W2,mid)
+            nod2_list = nod2
+            mid2 = akt(nod2)
+            mid2 = np.concatenate((mid2,np.array([1]).reshape(1,1)))
+            nod3 = np.matmul(W3,mid2)
+            nod3_list = nod3
+            mid3 = akt(nod3)
+            mid3 = np.concatenate((mid3,np.array([1]).reshape(1,1)))
+            son = np.matmul(W4,mid3)
+            cikis = akt(son)
+            hata = y_train[ton].reshape(len(W4),1)-cikis
+            grad_cikis = hata*akt_turev(son)
+            grad_3 = np.matmul(W4.T[:-1],grad_cikis)*akt_turev(nod3_list)
+            grad_2 = np.matmul(W3.T[:-1],grad_3)*akt_turev(nod2_list)
+            grad_1 = np.matmul(W2.T[:-1],grad_2)*akt_turev(nod_list)
+            a4=W4
+            a3=W3
+            a2=W2
+            a1=W1
+            W4 = W4+hiz[3]*np.matmul(grad_cikis,mid3.reshape(1,len(mid3)))+momentum[3]*(W4-moment_4)
+            W3 = W3+(hiz[2]*np.matmul(grad_3,mid2.reshape(1,len(mid2))))+momentum[2]*(W3-moment_3)
+            W2 = W2+hiz[1]*np.matmul(grad_2,mid.reshape(1,len(mid)))+momentum[1]*(W2-moment_2)
+            W1 = W1+hiz[0]*np.matmul(grad_1,ii.reshape(1,len(ii)))+momentum[0]*(W1-moment_1)
+            moment_4=a4
+            moment_3=a3
+            moment_2=a2
+            moment_1=a1
+            cikis_list[ton]=cikis.reshape(1,3)
+            mid = np.zeros((3))
+            mid2 = np.zeros((3))
+            mid3 = np.zeros((3))
+            ton+=1
+        ht = np.array([np.sqrt(mean_squared_error(cikis_list,y_train))])
+        hata_liste = np.concatenate((hata_liste, ht))
+    
+    # Sınıf değerlerinin alınabilmesi için vektörler içindeki maksimum değerler seçilir
+    egitim_ciktilari=np.zeros((len(y_train),1))
+    y_train_tekil=np.zeros((len(y_train),1))
+    for i in range (len(y_train)):
+        egitim_ciktilari[i] = cikis_list[i].max()
+        y_train_tekil[i] = y_train[i].max()
+    
+    #Eğitim çıktılarını çizdirmek için yorumdan satırından çıkarılmalıdır
+    #plt.scatter(np.arange(len(y_train)),egitim_ciktilari,c='b')#,label='Eğitim Çıktıları')
+    #plt.scatter(np.arange(len(y_train)),y_train_tekil,c='r')#,label='Gerçek Eğitim Değerleri')
+    #plt.legend(
+    # Hata değişimi çizdirilir.
+    plt.figure()
+    plt.scatter(np.arange(len(hata_liste)),hata_liste)
+    
+    # Test Bölgesi
+    cikis_liste = np.array([0,0,0]).reshape(1,3)
+    x_test_b = np.hstack ((x_test, [[1]] * len (x_test)))
+    for ii in (x_test_b):    
+        nod = np.matmul(W1,ii.reshape(len(ii.T),1))
+        nod_list = nod
+        mid = akt(nod)        
+        mid = np.concatenate((mid,np.array([1]).reshape(1,1)))
+        nod2 = np.matmul(W2,mid)
+        nod2_list = nod2
+        mid2 = akt(nod2)
+        mid2 = np.concatenate((mid2,np.array([1]).reshape(1,1)))
+        nod3 = np.matmul(W3,mid2)
+        nod3_list = nod3
+        mid3 = akt(nod3)
+        mid3 = np.concatenate((mid3,np.array([1]).reshape(1,1)))
+        son = np.matmul(W4,mid3)
+        cikis = akt(son)
+        cikis_liste = np.concatenate((cikis_liste,cikis.reshape(1,3)))
+    cikis_liste=cikis_liste[1:]
+    
+    # Test sonuçlarından sınıf verilerinin alınması.
+    
+    test_ciktilari=np.zeros((len(y_test),1))
+    y_test_tekil=np.zeros((len(y_test),1))
+    for i in range (len(y_test)):
+        test_ciktilari[i] = cikis_liste[i].max()
+        y_test_tekil[i] = y_test[i].max()
+        
+    # Test sonuçlarının çizdirilmesi.
+    plt.figure()
+    plt.scatter(np.arange(len(y_test)),test_ciktilari,c='b')
+    plt.scatter(np.arange(len(y_test)),y_test_tekil,c='r')
+    hatalar = np.concatenate((hatalar,np.sqrt(mean_squared_error(cikis_liste,y_test)).reshape(1,1)))    
+    print('Ortalama Test Hatası : ' , np.sqrt(mean_squared_error(cikis_liste,y_test)))
+print('\n', hatalar[1:],'\n')
+print('\n', hatalar[1:].mean(),'\n')
+print('\n',hatalar[1:].std())
+    
