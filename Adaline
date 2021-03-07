@@ -1,0 +1,82 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 22 15:26:10 2020
+
+@author: mteks
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.model_selection import train_test_split
+
+def aktivasyon(x):          # sigmoid aktivasyon
+    sonuc = 1/(1/max(fx)+(np.exp(-x/2)))
+    return sonuc
+
+a=np.linspace(0,10,20000) 
+a=a.reshape(10000,2)
+x1 = np.linspace(0,1,100).T
+x2 = np.linspace(0,np.pi/2,100).T
+x1 = x1.reshape(len(x1),1)
+x2 = x2.reshape(len(x2),1)
+for t in range (100):           # Tüm x1,x2 kombinasyonları değerleri almak için döngü oluşturuldu.
+    for i in range (100*t,100*(t+1)):        
+        a[i]=np.hstack ((x1, [x2[t]] * len (x1)))[i%100]
+        
+fx = 3*a[:,0]+2*np.cos(a[:,1])      # Düzlem çizilir.
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(a[:,1], a[:,0], fx)
+fx_scaled = fx/max(fx)
+plt.show()
+
+a_sample = np.linspace(0,100,2000).reshape(1000,2)  # Örnek küme alınması için listeler oluşturulup içine yazma işlemi yapıldı.
+fx_sample = np.linspace(0,1000,2000).reshape(1000,2)
+for i in range (1000):
+    a_sample[i]=a[i*9]
+    fx_sample[i]=fx[i*9]
+w = [1,1,1]
+a_sample = np.hstack ((a_sample, [[1]] * len (a_sample) ))
+x12_train,x12_test,y_train,y_test=train_test_split(a_sample,fx_sample,test_size = 0.25,random_state=10) # Eğitim test kümeleri ayrıldı.
+
+# eğitim
+z = 0
+c=1
+w=[1,1,1]
+hata = 1
+iterasyon=0
+liste=[]
+
+while (hata**2)/2 >= 0.05:  # Hata karesinin yarı değeri bu değer altına inene kadar eğitim devam edecektir.
+    hata=0
+    for i in range (750):
+        t = w*x12_train[i]
+        v = sum(t)
+        z = aktivasyon(v)
+        hata = (y_train[i,0]-z) # Hata değeri hesaplanır.
+        w=w+(-0.5*(hata)*x12_train[i]*9*np.exp(v/2)/(2*(np.exp(v/2)+max(fx))*(np.exp(v/2)+max(fx)))) # Güncelleme yapılır.
+    iterasyon=iterasyon+1
+print('Son ağırlıklar : ',w,'\n','İterasyon Sayısı :',iterasyon)   
+
+#Test Bölgesi
+hata_top = 0
+hata=0
+son = np.linspace(1,10,250)
+son = son.reshape(250,1)
+for i in range (250):
+    y = w*x12_test[i]
+    h = sum(y)
+    z = aktivasyon(h)
+    son[i]=z
+    hata = (y_test[i,0]-z)
+    hata_top = hata_top+hata
+
+print('Ortalama Hata :',hata_top/250)
+
+fig = plt.figure()
+ax = fig.add_subplot(122, projection='3d')
+ax.scatter(a[:,1],a[:,0],fx,c='g')
+ax.scatter(x12_test[:,1],x12_test[:,0],y_test[:,0],c='b')
+ax.scatter(x12_test[:,1],x12_test[:,0],son,c='r')
+plt.show()
