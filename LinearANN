@@ -1,0 +1,120 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 22 05:15:57 2020
+
+@author: mteks
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import numpy.random as rd
+#lineer ayrıştılabilir a şıkkı
+def aktivasyon(x):      #Ayrık aktivasyon fonksiyonu tanımlanır.
+    if x > 0:
+        return(1)
+    if x <= 0:
+        return(-1)
+def kumeleme(x):            #Sınıflandırma için kullanılacak fonksiyon tanımlanır.
+    if x in S1.tolist():
+        return (1)
+    if x in S2.tolist():
+        return(-1)
+
+kume = rd.randn(160)*10             # 40*4 lük küme oluşturulur.
+kume_5 = rd.choice([-1,1],size=40)
+kume = kume.reshape(40,4)
+kume = np.hstack((kume, np.atleast_2d(kume_5).T))  # lineer ayrıştırılabilir olması için 5. sutün belirlenen şekilde eklenir.
+kume_b = np.hstack ((kume, [[1]] * len (kume) ))
+pri_w_list = np.array(([1,1,1,1,1,1],[0,1,0,1,0,1],[0.5,0.2,0.7,0.6,0,4])) # farklı ağırlık değerleri tanımlanır.
+hata_sayisi = 1
+iterasyon_sayisi = 0
+S1 = kume_b[np.where(kume_b[:,4]==1)]   # Kümeler ayrılır.
+S2 = kume_b[np.where(kume_b[:,4]==-1)]
+hiz = [0.1,0.5,1]   # Öğrenme hızları tanımlanır.
+last_w_list = []
+# Egitim Bolgesi
+for w_st in pri_w_list:
+    for c in hiz:
+        iterasyon_sayisi = 0
+        w = w_st
+        hata_sayisi = 1
+        while hata_sayisi != 0 :   # Hata sayısı sıfırlanana kadar devam etmeli.
+            hata_sayisi = 0
+            for i in range (25):
+                y = w*kume_b[i]
+                z = sum(y)
+                t = aktivasyon(z)
+                tt = kumeleme(list(kume_b[i]))
+                if t != tt:    # Çıkan değer istenilen değer mi diye kontrol edilir. Değilse hata sayısı 1 artar.
+                    hata_sayisi += 1
+                w=w+(0.5*c*(tt-t)*kume_b[i]) # Ağırlık güncellemesi yapılır.
+            iterasyon_sayisi = iterasyon_sayisi + 1
+        last_w_list.append(w)  # Yeni ağırlık değerleri listeye eklenir.
+        print('Giriş Ağırlıkları: ',w_st,'\n','Öğrenme Hızı: ',c,'\n''Çıkış Ağırlığı Ağırlık : ',w,'\n'
+             'İterasyon Sayısı : ',iterasyon_sayisi,'\n')
+# test bölgesi
+
+for w in last_w_list:
+    test_hata_sayisi = 0
+    for i in range (25,40):
+        y = w*kume_b[i]   # Bulunan son ağırlık ile çarpılır. Ağırlık sabittir.
+        z = sum(y)
+        t = aktivasyon(z)
+        tt = kumeleme(list(kume_b[i]))
+        if t != tt:             # Test sonucu ve istenilen değerler karşılaştırılır ve yazılır.
+            test_hata_sayisi += 1       
+    print('Test hata sayısı : ',test_hata_sayisi,'\n')
+    
+#lineer ayrıştırılamaz
+import numpy as np
+import matplotlib.pyplot as plt
+import numpy.random as rd
+
+def aktivasyon(x):      #Ayrık aktivasyon fonksiyonu tanımlanır.
+    if x > 0:
+        return(1)
+    if x <= 0:
+        return(-1)
+def kumeleme(x):             #Sınıflandırma için kullanılacak fonksiyon tanımlanır.
+    if x in S1.tolist():
+        return (1)
+    if x in S2.tolist():
+        return(-1)
+    
+kume_n = rd.randn(200)*10
+kume_n = kume_n.reshape(40,5)           # 40*5 lük küme oluşturulur.
+kume_bn = np.hstack ((kume_n, [[1]] * len (kume_n) ))
+w = np.array([1,1,1,1,1])
+c=1
+hata_sayisi = 1
+iterasyon_sayisi = 0
+S1 = kume_n[0:12]
+S2 = kume_n[12:24]
+S3 = kume_n[24:32]
+S4 = kume_n[32:40]
+train = np.vstack((S1,S2))
+test = np.vstack((S3,S4))
+pri_w_list = np.array(([1,1,1,1,1],[0,1,0,1,1],[0.5,0.2,0.7,0.6,1]))  # farklı ağırlık değerleri tanımlanır.
+hiz = [0.1,0.5,1]
+
+# Egitim Bolgesi
+
+for w_st in pri_w_list:
+    for c in hiz:
+        iterasyon_sayisi = 0
+        w = w_st
+        hata_sayisi = 1
+        while hata_sayisi != 0 :
+            hata_sayisi = 0
+            for i in range (24):
+                y = w*train[i]
+                z = sum(y)
+                t = aktivasyon(z)
+                tt = kumeleme(list(train[i]))
+                if t != tt:          # Çıkan değer istenilen değer mi diye kontrol edilir. Değilse hata sayısı 1 artar.
+                    hata_sayisi += 1
+                w=w+(0.5*c*(tt-t)*train[i])
+            iterasyon_sayisi = iterasyon_sayisi + 1
+            if iterasyon_sayisi == 10000:
+                print('Olmadı.')
+                break
